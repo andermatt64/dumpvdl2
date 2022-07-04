@@ -96,6 +96,8 @@
 #define __OPT_PRETTIFY_XML           25
 #define __OPT_MILLISECONDS           26
 
+#define __OPT_SKIP_ACARS_REASSEMBLY  30
+
 #ifdef WITH_SDRPLAY3
 #define __OPT_SDRPLAY3               70
 #define __OPT_SDRPLAY3_DAB_NOTCH_FILTER      71
@@ -210,6 +212,7 @@ typedef struct {
 	bool output_raw_frames, dump_asn1, extended_header, decode_fragments;
 	bool ac_addrinfo_db_available;
 	bool gs_addrinfo_db_available;
+	bool skip_acars_reassembly;
 	addrinfo_verbosity_t addrinfo_verbosity;
 } dumpvdl2_config_t;
 

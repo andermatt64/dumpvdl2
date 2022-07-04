@@ -255,7 +255,8 @@ la_proto_node *avlc_parse(avlc_frame_qentry_t *q, uint32_t *msg_type, la_reasm_c
 	} else {     // IS_I(frame->lcf) == true
 		*msg_type |= MSGFLT_AVLC_I;
 		if(len > 3 && ptr[0] == 0xff && ptr[1] == 0xff && ptr[2] == 0x01) {
-			node->next = parse_acars(ptr + 3, len - 3, msg_type, reasm_ctx, q->metadata->burst_timestamp);
+			node->next = parse_acars(ptr + 3, len - 3, msg_type, Config.skip_acars_reassembly ? NULL : reasm_ctx, 
+					q->metadata->burst_timestamp);
 		} else {
 			node->next = x25_parse(ptr, len, msg_type, reasm_ctx, q->metadata->burst_timestamp,
 					frame->src.a_addr.addr, frame->dst.a_addr.addr);

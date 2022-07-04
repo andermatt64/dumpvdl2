@@ -467,6 +467,7 @@ void usage() {
 	fprintf(stderr, "%*s(default: %d messages, not applicable when using --iq-file or --raw-frames-file)\n", USAGE_OPT_NAME_COLWIDTH, "", OUTPUT_QUEUE_HWM_DEFAULT);
 	describe_option("--decode-fragments", "Decode higher level protocols in fragmented packets", 1);
 	describe_option("--gs-file <file>", "Read ground station info from <file> (MultiPSK format)", 1);
+	describe_option("--skip-acars-reassembly", "Skip reassembly of ACARS message fragments", 1);
 #ifdef WITH_SQLITE
 	describe_option("--bs-db <file>", "Read aircraft info from Basestation database <file> (SQLite)", 1);
 #endif
@@ -654,75 +655,76 @@ int main(int argc, char **argv) {
 #endif
 	int opt;
 	struct option long_opts[] = {
-		{ "centerfreq",         required_argument,  NULL,   __OPT_CENTERFREQ },
-		{ "station-id",         required_argument,  NULL,   __OPT_STATION_ID },
-		{ "utc",                no_argument,        NULL,   __OPT_UTC },
-		{ "milliseconds",       no_argument,        NULL,   __OPT_MILLISECONDS },
-		{ "raw-frames",         no_argument,        NULL,   __OPT_RAW_FRAMES },
-		{ "dump-asn1",          no_argument,        NULL,   __OPT_DUMP_ASN1 },
-		{ "extended-header",    no_argument,        NULL,   __OPT_EXTENDED_HEADER },
-		{ "decode-fragments",   no_argument,        NULL,   __OPT_DECODE_FRAGMENTS },
-		{ "prettify-xml",       no_argument,        NULL,   __OPT_PRETTIFY_XML },
-		{ "gs-file",            required_argument,  NULL,   __OPT_GS_FILE },
+		{ "centerfreq",         	required_argument,  NULL,   __OPT_CENTERFREQ },
+		{ "station-id",         	required_argument,  NULL,   __OPT_STATION_ID },
+		{ "utc",                	no_argument,        NULL,   __OPT_UTC },
+		{ "milliseconds",       	no_argument,        NULL,   __OPT_MILLISECONDS },
+		{ "raw-frames",         	no_argument,        NULL,   __OPT_RAW_FRAMES },
+		{ "dump-asn1",          	no_argument,        NULL,   __OPT_DUMP_ASN1 },
+		{ "extended-header",    	no_argument,        NULL,   __OPT_EXTENDED_HEADER },
+		{ "decode-fragments",   	no_argument,        NULL,   __OPT_DECODE_FRAGMENTS },
+		{ "prettify-xml",       	no_argument,        NULL,   __OPT_PRETTIFY_XML },
+		{ "gs-file",            	required_argument,  NULL,   __OPT_GS_FILE },
+		{ "skip-acars-reassembly",	no_argument,		NULL,	__OPT_SKIP_ACARS_REASSEMBLY },
 #ifdef WITH_SQLITE
-		{ "bs-db",              required_argument,  NULL,   __OPT_BS_DB },
+		{ "bs-db",              	required_argument,  NULL,   __OPT_BS_DB },
 #endif
-		{ "addrinfo",           required_argument,  NULL,   __OPT_ADDRINFO_VERBOSITY },
-		{ "output",             required_argument,  NULL,   __OPT_OUTPUT },
-		{ "output-queue-hwm",   required_argument,  NULL,   __OPT_OUTPUT_QUEUE_HWM },
-		{ "iq-file",            required_argument,  NULL,   __OPT_IQ_FILE },
-		{ "oversample",         required_argument,  NULL,   __OPT_OVERSAMPLE },
-		{ "sample-format",      required_argument,  NULL,   __OPT_SAMPLE_FORMAT },
-		{ "msg-filter",         required_argument,  NULL,   __OPT_MSG_FILTER },
+		{ "addrinfo",           	required_argument,  NULL,   __OPT_ADDRINFO_VERBOSITY },
+		{ "output",             	required_argument,  NULL,   __OPT_OUTPUT },
+		{ "output-queue-hwm",   	required_argument,  NULL,   __OPT_OUTPUT_QUEUE_HWM },
+		{ "iq-file",            	required_argument,  NULL,   __OPT_IQ_FILE },
+		{ "oversample",         	required_argument,  NULL,   __OPT_OVERSAMPLE },
+		{ "sample-format",      	required_argument,  NULL,   __OPT_SAMPLE_FORMAT },
+		{ "msg-filter",         	required_argument,  NULL,   __OPT_MSG_FILTER },
 #ifdef WITH_MIRISDR
-		{ "mirisdr",            required_argument,  NULL,   __OPT_MIRISDR },
-		{ "hw-type",            required_argument,  NULL,   __OPT_HW_TYPE },
-		{ "usb-mode",           required_argument,  NULL,   __OPT_USB_MODE },
+		{ "mirisdr",            	required_argument,  NULL,   __OPT_MIRISDR },
+		{ "hw-type",            	required_argument,  NULL,   __OPT_HW_TYPE },
+		{ "usb-mode",           	required_argument,  NULL,   __OPT_USB_MODE },
 #endif
 #ifdef WITH_SDRPLAY
-		{ "sdrplay",            required_argument,  NULL,   __OPT_SDRPLAY },
-		{ "gr",                 required_argument,  NULL,   __OPT_GR },
+		{ "sdrplay",            	required_argument,  NULL,   __OPT_SDRPLAY },
+		{ "gr",                 	required_argument,  NULL,   __OPT_GR },
 #endif
 #ifdef WITH_SDRPLAY3
-		{ "sdrplay3",           required_argument,  NULL,   __OPT_SDRPLAY3 },
-		{ "ifgr",               required_argument,  NULL,   __OPT_SDRPLAY3_IFGR },
-		{ "lna-state",          required_argument,  NULL,   __OPT_SDRPLAY3_LNA_STATE },
-		{ "dab-notch-filter",   required_argument,  NULL,   __OPT_SDRPLAY3_DAB_NOTCH_FILTER },
+		{ "sdrplay3",           	required_argument,  NULL,   __OPT_SDRPLAY3 },
+		{ "ifgr",               	required_argument,  NULL,   __OPT_SDRPLAY3_IFGR },
+		{ "lna-state",          	required_argument,  NULL,   __OPT_SDRPLAY3_LNA_STATE },
+		{ "dab-notch-filter",   	required_argument,  NULL,   __OPT_SDRPLAY3_DAB_NOTCH_FILTER },
 #endif
 #if defined WITH_SDRPLAY || defined WITH_SDRPLAY3
-		{ "antenna",            required_argument,  NULL,   __OPT_ANTENNA },
-		{ "biast",              required_argument,  NULL,   __OPT_BIAST },
-		{ "notch-filter",       required_argument,  NULL,   __OPT_NOTCH_FILTER },
-		{ "agc",                required_argument,  NULL,   __OPT_AGC },
-		{ "tuner",              required_argument,  NULL,   __OPT_TUNER },
+		{ "antenna",            	required_argument,  NULL,   __OPT_ANTENNA },
+		{ "biast",              	required_argument,  NULL,   __OPT_BIAST },
+		{ "notch-filter",       	required_argument,  NULL,   __OPT_NOTCH_FILTER },
+		{ "agc",                	required_argument,  NULL,   __OPT_AGC },
+		{ "tuner",              	required_argument,  NULL,   __OPT_TUNER },
 #endif
 #ifdef WITH_SOAPYSDR
-		{ "soapysdr",           required_argument,  NULL,   __OPT_SOAPYSDR },
-		{ "device-settings",    required_argument,  NULL,   __OPT_DEVICE_SETTINGS },
-		{ "soapy-antenna",      required_argument,  NULL,   __OPT_SOAPY_ANTENNA },
-		{ "soapy-gain",         required_argument,  NULL,   __OPT_SOAPY_GAIN },
+		{ "soapysdr",           	required_argument,  NULL,   __OPT_SOAPYSDR },
+		{ "device-settings",    	required_argument,  NULL,   __OPT_DEVICE_SETTINGS },
+		{ "soapy-antenna",      	required_argument,  NULL,   __OPT_SOAPY_ANTENNA },
+		{ "soapy-gain",         	required_argument,  NULL,   __OPT_SOAPY_GAIN },
 #endif
 #ifdef WITH_RTLSDR
-		{ "rtlsdr",             required_argument,  NULL,   __OPT_RTLSDR },
+		{ "rtlsdr",             	required_argument,  NULL,   __OPT_RTLSDR },
 #endif
 #if defined WITH_RTLSDR || defined WITH_MIRISDR || defined WITH_SOAPYSDR
-		{ "gain",               required_argument,  NULL,   __OPT_GAIN },
+		{ "gain",               	required_argument,  NULL,   __OPT_GAIN },
 #endif
 #if defined WITH_RTLSDR || defined WITH_MIRISDR || defined WITH_SDRPLAY || defined WITH_SDRPLAY3 || defined WITH_SOAPYSDR
-		{ "correction",         required_argument,  NULL,   __OPT_CORRECTION },
+		{ "correction",         	required_argument,  NULL,   __OPT_CORRECTION },
 #endif
 #ifdef WITH_PROTOBUF_C
-		{ "raw-frames-file",    required_argument,  NULL,   __OPT_RAW_FRAMES_FILE },
+		{ "raw-frames-file",    	required_argument,  NULL,   __OPT_RAW_FRAMES_FILE },
 #endif
 #ifdef WITH_STATSD
-		{ "statsd",             required_argument,  NULL,   __OPT_STATSD },
+		{ "statsd",             	required_argument,  NULL,   __OPT_STATSD },
 #endif
-		{ "version",            no_argument,        NULL,   __OPT_VERSION },
-		{ "help",               no_argument,        NULL,   __OPT_HELP },
+		{ "version",            	no_argument,        NULL,   __OPT_VERSION },
+		{ "help",               	no_argument,        NULL,   __OPT_HELP },
 #ifdef DEBUG
-		{ "debug",              required_argument,  NULL,   __OPT_DEBUG },
+		{ "debug",              	required_argument,  NULL,   __OPT_DEBUG },
 #endif
-		{ 0,                    0,                  0,      0 }
+		{ 0,                    	0,                  0,      0 }
 	};
 
 #ifdef WITH_STATSD
@@ -792,6 +794,9 @@ int main(int argc, char **argv) {
 				break;
 			case __OPT_GS_FILE:
 				gs_file = optarg;
+				break;
+			case __OPT_SKIP_ACARS_REASSEMBLY:
+				Config.skip_acars_reassembly = true;
 				break;
 #ifdef WITH_SQLITE
 			case __OPT_BS_DB:
