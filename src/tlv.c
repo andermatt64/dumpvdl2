@@ -149,7 +149,7 @@ static void tlv_tag_output_json(tlv_tag_t const *t, void *ctx) {
       la_json_object_start(c->vstr, t->td->json_key);
       la_json_object_end(c->vstr);
     } else {
-      t->td->format_json(c->vstr, t->td->json_key, t->data)
+      t->td->format_json(c, t->td->json_key, t->data);
     }
 
 		la_json_object_end(c->vstr);
