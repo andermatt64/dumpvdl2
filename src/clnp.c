@@ -737,7 +737,11 @@ void clnp_compressed_data_pdu_format_json(la_vstring *vstr, void const *data) {
 	la_json_append_int64(vstr, "priority", pdu->hdr->priority);
 	la_json_append_double(vstr, "lifetime",
 			(double)pdu->lifetime.tv_sec + (double)pdu->lifetime.tv_usec / 1e6 );
-	la_json_append_int64(vstr, "flags", pdu->hdr->flags.val);
+
+	la_json_object_start(vstr, "flags");
+	la_json_append_int64(vstr, "raw", pdu->hdr->flags.val);
+	la_json_object_end(vstr);
+	
 	if(pdu->is_segmentation_permitted) {
 		la_json_append_int64(vstr, "pdu_id", pdu->pdu_id);
 	}
